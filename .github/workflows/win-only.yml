@@ -1,0 +1,83 @@
+name: Windows Build & Release
+
+on:
+  # Manual “Run workflow” button in the Actions tab
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'SemVer (e.g. 1.4.2). Leave blank to auto-bump the patch level.'
+        required: false
+  # Re-build automatically if you push an existing tag that already looks like v1.4.2
+  push:
+    tags: ['v*.*.*']
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:                 # needed by softprops/action-gh-release
+      contents: write
+
+    env:
+      BUILD_DIR:   build         # out-of-source build folder
+      RELEASE_DIR: release       # where the final .zip lands
+
+    steps:
+    # ────────────────────── 0. get source ──────────────────────
+    - uses: actions/checkout@v4
+
+    # ────────────────────── 1. decide which version tag to use ──────────────────────
+    - name: Determine version
+      id: version
+      shell: bash
+      run: |
+        if [[ -n "${{ github.event.inputs.version }}" ]]; then
+          echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+        else
+          LAST=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          LAST=${LAST#v}
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$LAST"
+          PATCH=$((PATCH+1))
+          echo "VERSION=${MAJOR}.${MINOR}.${PATCH}" >> $GITHUB_OUTPUT
+        fi
+
+    # ────────────────────── 2. install a pre-built Qt for MSVC 2022 64-bit ──────────────────────
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: '5.15.2'           # change to 6.x if you have ported qView
+        arch:    win64_msvc2022_64
+        cache:   true               # speeds up repeat runs
+
+    # ────────────────────── 3. configure & build with qmake / nmake ──────────────────────
+    - name: Configure and build
+      shell: bash
+      run: |
+        mkdir -p "$BUILD_DIR" "$RELEASE_DIR"
+        cd "$BUILD_DIR"
+        qmake -r ../qView.pro
+        nmake
+
+    # ────────────────────── 4. bundle Qt DLLs and zip the folder ──────────────────────
+    - name: Bundle with windeployqt
+      shell: bash
+      run: |
+        cd "$BUILD_DIR"
+        windeployqt release/qView.exe --compiler-runtime --no-translations
+        cd release
+        zip -r "../../$RELEASE_DIR/qview-${{ steps.version.outputs.VERSION }}-win64.zip" .
+
+    # (optional) keep a copy in the workflow run for 90 days
+    - uses: actions/upload-artifact@v4
+      with:
+        name: qview-win64
+        path: ${{ env.RELEASE_DIR }}/*
+
+    # ────────────────────── 5. create / update a GitHub Release and attach the zip ──────────────────────
+    - name: Publish Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v${{ steps.version.outputs.VERSION }}
+        name:     v${{ steps.version.outputs.VERSION }}
+        draft:    false
+        prerelease: false
+        files:    ${{ env.RELEASE_DIR }}/*
