@@ -3,6 +3,7 @@
 #include "settingsmanager.h"
 
 #include <QGraphicsOpacityEffect>
+#include <QPropertyAnimation>
 #include <QShowEvent>
 #include <QPainter>
 #include <QEasingCurve>

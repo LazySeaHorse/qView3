@@ -6,6 +6,8 @@
 #include <QVariantAnimation>
 #include <QParallelAnimationGroup>
 
+class QPropertyAnimation;
+
 class AnimatedGraphicsView : public QVGraphicsView
 {
     Q_OBJECT
