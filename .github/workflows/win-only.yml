@@ -1,93 +1,62 @@
-name: Windows Build & Release
+name: Build qView for Windows Release
 
 on:
-  # Manual button in the Actions tab
   workflow_dispatch:
     inputs:
       version:
-        description: 'SemVer (e.g. 1.4.2). Leave blank to auto-bump the patch.'
+        type: string
+        description: 'Release version (e.g., v4.0.1)'
+        required: true
+      prerelease:
+        type: boolean
+        description: 'Is this a pre-release?'
         required: false
-  # Optional automatic run when you push a version tag
-  push:
-    tags: ['v*.*.*']
+        default: false
 
 jobs:
   build:
-    runs-on: windows-latest
-    permissions:
-      contents: write         # needed by softprops/action-gh-release
-    env:
-      BUILD_DIR:   build
-      RELEASE_DIR: release
-
+    runs-on: windows-2022
+    
     steps:
-    # ── 1. Checkout source (incl. full history so git tags are visible) ──
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Set environment variables
+        shell: bash
+        run: |
+          echo "qtArch=win64_msvc2022_64" >> $GITHUB_ENV
+          echo "version=${{ inputs.version }}" >> $GITHUB_ENV
 
-    # ── 2. Decide which version we are building ──
-    - name: Determine version
-      id: version
-      shell: bash
-      run: |
-        if [ -n "${{ github.event.inputs.version }}" ]; then
-          VERSION="${{ github.event.inputs.version }}"
-        else
-          LAST=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-          LAST=${LAST#v}
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$LAST"
-          PATCH=$((PATCH+1))
-          VERSION="${MAJOR}.${MINOR}.${PATCH}"
-        fi
-        echo "VERSION=$VERSION" >> $GITHUB_ENV      # for later steps
-        echo "version=$VERSION"  >> $GITHUB_OUTPUT  # for softprops
+      - uses: actions/checkout@v4
 
-    # ── 3. Install pre-built Qt 5.15.2 / MSVC 2019 x64 ──
-    - name: Install Qt
-      uses: jurplel/install-qt-action@v4
-      with:
-        version: '5.15.2'
-        arch:    win64_msvc2019_64
-        cache:   true
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.3'
+          arch: 'win64_msvc2022_64'
+          cache: true
+          modules: 'qtimageformats'
 
-    # ── 4. Load the Visual Studio Build-Tools environment (vcvars) ──
-    - name: Set up MSVC environment
-      uses: ilammy/msvc-dev-cmd@v1
-      with:
-        arch: amd64             # 64-bit compiler
+      - name: Build qView
+        shell: pwsh
+        run: dist/scripts/build.ps1
 
-    # ── 5. Configure & build (qmake → nmake) ──
-    - name: Configure and build
-      shell: cmd
-      run: |
-        mkdir %BUILD_DIR%
-        mkdir %RELEASE_DIR%
-        cd %BUILD_DIR%
-        qmake -r ..\qView.pro
-        nmake
+      - name: Deploy qView
+        shell: pwsh
+        run: |
+          Invoke-Expression "& 'dist/scripts/download-plugins.ps1'"
+          Invoke-Expression "& 'dist/scripts/windeployqt.ps1' ${{ inputs.version }}"
 
-    # ── 6. Bundle Qt runtime and zip everything ──
-    - name: Bundle with windeployqt
-      shell: powershell
-      run: |
-        cd $env:BUILD_DIR
-        & windeployqt "release\qView.exe" --compiler-runtime --no-translations
-        Compress-Archive -Path release\* `
-                         -DestinationPath "..\${env:RELEASE_DIR}\qview-$env:VERSION-win64.zip"
+      - name: Package for release
+        shell: pwsh
+        run: |
+          $zipName = "qView-${{ inputs.version }}-Windows-x64.zip"
+          Compress-Archive -Path bin\* -DestinationPath $zipName
 
-    # (optional) keep a copy of the ZIP as a workflow artifact for 90 days
-    - uses: actions/upload-artifact@v4
-      with:
-        name: qview-win64
-        path: ${{ env.RELEASE_DIR }}\*.zip
-
-    # ── 7. Create / update the GitHub Release and attach the ZIP ──
-    - name: Publish GitHub Release
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: v${{ env.VERSION }}
-        name:    v${{ env.VERSION }}
-        draft:   false
-        prerelease: false
-        files:   ${{ env.RELEASE_DIR }}\*.zip
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ inputs.version }}
+          name: qView ${{ inputs.version }}
+          draft: false
+          prerelease: ${{ inputs.prerelease }}
+          files: qView-${{ inputs.version }}-Windows-x64.zip
+          body: |
+            qView ${{ inputs.version }} for Windows x64
