@@ -157,6 +157,11 @@ void SettingsManager::initializeSettingsLibrary()
     settingsLibrary.insert("quitonlastwindow", {false, {}});
     settingsLibrary.insert("menubarenabled", {false, {}});
     settingsLibrary.insert("fullscreendetails", {false, {}});
+    // Visual Effects
+    settingsLibrary.insert("opencloseanimenabled", {true, {}});
+    settingsLibrary.insert("opencloseanimduration", {250, {}});
+    settingsLibrary.insert("overlayenabled", {true, {}});
+    settingsLibrary.insert("overlayopacity", {153, {}});
     // Image
     settingsLibrary.insert("filteringenabled", {true, {}});
     settingsLibrary.insert("scalingenabled", {true, {}});
@@ -182,4 +187,7 @@ void SettingsManager::initializeSettingsLibrary()
     settingsLibrary.insert("saverecents", {true, {}});
     settingsLibrary.insert("updatenotifications", {false, {}});
     settingsLibrary.insert("skiphidden", {true, {}});
+    // Film strip
+    settingsLibrary.insert("filmstriptimeout", {3000, {}});
+    settingsLibrary.insert("filmstrippinned", {false, {}});
 }

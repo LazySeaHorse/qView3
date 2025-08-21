@@ -250,6 +250,90 @@
          </property>
         </widget>
        </item>
+       <item row="14" column="0" colspan="2">
+        <widget class="QGroupBox" name="visualEffectsGroupBox">
+         <property name="title">
+          <string>Visual Effects</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_ve">
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="openCloseAnimCheckbox">
+            <property name="text">
+             <string>Enable open/close animation</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QSpinBox" name="openCloseAnimDurationSpinBox">
+            <property name="suffix">
+             <string> ms</string>
+            </property>
+            <property name="minimum">
+             <number>50</number>
+            </property>
+            <property name="maximum">
+             <number>2000</number>
+            </property>
+            <property name="singleStep">
+             <number>25</number>
+            </property>
+            <property name="value">
+             <number>250</number>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QCheckBox" name="overlayEnabledCheckbox">
+            <property name="text">
+             <string>Dark overlay outside image</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QSpinBox" name="overlayOpacitySpinBox">
+            <property name="suffix">
+             <string> opacity</string>
+            </property>
+            <property name="minimum">
+             <number>0</number>
+            </property>
+            <property name="maximum">
+             <number>255</number>
+            </property>
+            <property name="value">
+             <number>153</number>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QCheckBox" name="filmStripPinnedCheckbox">
+            <property name="text">
+             <string>Pin film-strip</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QSpinBox" name="filmStripTimeoutSpinBox">
+            <property name="suffix">
+             <string> ms</string>
+            </property>
+            <property name="minimum">
+             <number>500</number>
+            </property>
+            <property name="maximum">
+             <number>15000</number>
+            </property>
+            <property name="singleStep">
+             <number>100</number>
+            </property>
+            <property name="value">
+             <number>3000</number>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
       </layout>
      </widget>
      <widget class="QWidget" name="image">

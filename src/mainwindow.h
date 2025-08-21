@@ -4,6 +4,10 @@
 #include "qvinfodialog.h"
 #include "qvimagecore.h"
 #include "qvgraphicsview.h"
+#include "animatedgraphicsview.h"
+#include <QPointer>
+
+class ThumbnailStrip;
 #include "openwith.h"
 
 #include <QMainWindow>
@@ -143,6 +147,8 @@ protected:
 
     void mouseDoubleClickEvent(QMouseEvent *event) override;
 
+    void mouseMoveEvent(QMouseEvent *event) override;
+
     void paintEvent(QPaintEvent *event) override;
 
 protected slots:
@@ -152,6 +158,11 @@ protected slots:
 private:
     Ui::MainWindow *ui;
     QVGraphicsView *graphicsView;
+
+    QPointer<ThumbnailStrip> thumbnailStrip;
+    QShortcut *toggleStripShortcut;
+    QShortcut *pinStripShortcut;
+    bool isCloseAnimating = false;
 
     QMenu *contextMenu;
     QMenu *virtualMenu;
@@ -174,6 +185,11 @@ private:
 
     QTimer *populateOpenWithTimer;
     QFutureWatcher<QList<OpenWith::OpenWithItem>> openWithFutureWatcher;
+
+private slots:
+    void showStrip();
+    void hideStrip();
+    void toggleStripPin();
 };
 
 #endif // MAINWINDOW_H

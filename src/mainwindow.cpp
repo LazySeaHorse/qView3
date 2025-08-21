@@ -3,6 +3,7 @@
 #include "qvapplication.h"
 #include "qvcocoafunctions.h"
 #include "qvrenamedialog.h"
+#include "thumbnailstrip.h"
 
 #include <QFileDialog>
 #include <QMessageBox>
@@ -51,9 +52,11 @@ MainWindow::MainWindow(QWidget *parent) :
     justLaunchedWithImage = false;
     storedWindowState = Qt::WindowNoState;
 
-    // Initialize graphicsviewkDefaultBufferAlignment
-    graphicsView = new QVGraphicsView(this);
+    // Initialize graphics view
+    graphicsView = new AnimatedGraphicsView(this);
     centralWidget()->layout()->addWidget(graphicsView);
+
+    thumbnailStrip = nullptr;
 
     // Hide fullscreen label by default
     ui->fullscreenLabel->hide();
@@ -66,9 +69,29 @@ MainWindow::MainWindow(QWidget *parent) :
     // Initialize escape shortcut
     escShortcut = new QShortcut(Qt::Key_Escape, this);
     connect(escShortcut, &QShortcut::activated, this, [this](){
+        if (isCloseAnimating)
+        {
+            // Abort close animation immediately
+            if (auto animated = qobject_cast<AnimatedGraphicsView*>(graphicsView))
+                animated->abortCloseAnimation();
+            return;
+        }
         if (windowState() == Qt::WindowFullScreen)
             toggleFullScreen();
     });
+
+    // Shortcuts for thumbnail strip
+    toggleStripShortcut = new QShortcut(QKeySequence(Qt::Key_Tab), this);
+    connect(toggleStripShortcut, &QShortcut::activated, this, [this](){
+        if (!thumbnailStrip)
+            showStrip();
+        else if (thumbnailStrip->isVisible())
+            hideStrip();
+        else
+            showStrip();
+    });
+    pinStripShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_T), this);
+    connect(pinStripShortcut, &QShortcut::activated, this, &MainWindow::toggleStripPin);
 
     // Enable drag&dropping
     setAcceptDrops(true);
@@ -227,6 +250,23 @@ void MainWindow::closeEvent(QCloseEvent *event)
     qvApp->getActionManager().untrackClonedActions(menuBar());
     qvApp->getActionManager().untrackClonedActions(virtualMenu);
 
+    if (qvApp->getSettingsManager().getBoolean("opencloseanimenabled"))
+    {
+        if (!isCloseAnimating)
+        {
+            isCloseAnimating = true;
+            event->ignore();
+            if (auto animated = qobject_cast<AnimatedGraphicsView*>(graphicsView))
+            {
+                connect(animated, &AnimatedGraphicsView::closeAnimationFinished, this, [this](){
+                    isCloseAnimating = false;
+                    QMainWindow::close();
+                });
+                animated->startCloseAnimation();
+            }
+            return;
+        }
+    }
     QMainWindow::closeEvent(event);
 }
 
@@ -274,6 +314,17 @@ void MainWindow::mouseDoubleClickEvent(QMouseEvent *event)
     QMainWindow::mouseDoubleClickEvent(event);
 }
 
+void MainWindow::mouseMoveEvent(QMouseEvent *event)
+{
+    const int edge = 20;
+    if (rect().contains(event->pos()))
+    {
+        if (height() - event->pos().y() <= edge)
+            showStrip();
+    }
+    QMainWindow::mouseMoveEvent(event);
+}
+
 void MainWindow::paintEvent(QPaintEvent *event)
 {
     Q_UNUSED(event);
@@ -314,6 +365,48 @@ void MainWindow::paintEvent(QPaintEvent *event)
         painter.drawText(unobscuredViewportRect, errorMessage, QTextOption(Qt::AlignCenter));
     }
     QMainWindow::paintEvent(event);
+}
+
+void MainWindow::showStrip()
+{
+    if (!thumbnailStrip)
+    {
+        thumbnailStrip = new ThumbnailStrip(this);
+        thumbnailStrip->setFixedHeight(96);
+        thumbnailStrip->hide();
+        // Position at bottom
+        thumbnailStrip->move(0, height() - thumbnailStrip->height());
+        thumbnailStrip->resize(width(), thumbnailStrip->height());
+        connect(thumbnailStrip, &ThumbnailStrip::thumbnailActivated, this, &MainWindow::openFile);
+        connect(thumbnailStrip, &ThumbnailStrip::requestHide, this, &MainWindow::hideStrip);
+    }
+    // Update file list
+    const auto &files = getCurrentFileDetails().folderFileInfoList;
+    QStringList paths; paths.reserve(files.size());
+    for (const auto &f : files) paths.append(f.absoluteFilePath);
+    thumbnailStrip->setFiles(paths, getCurrentFileDetails().loadedIndexInFolder);
+    thumbnailStrip->setPinned(qvApp->getSettingsManager().getBoolean("filmstrippinned"));
+    thumbnailStrip->setTimeout(qvApp->getSettingsManager().getInteger("filmstriptimeout"));
+    thumbnailStrip->showAnimated();
+}
+
+void MainWindow::hideStrip()
+{
+    if (thumbnailStrip)
+        thumbnailStrip->hideAnimated();
+}
+
+void MainWindow::toggleStripPin()
+{
+    if (!thumbnailStrip)
+        showStrip();
+    if (thumbnailStrip)
+    {
+        const bool newPinned = !thumbnailStrip->isPinned();
+        thumbnailStrip->setPinned(newPinned);
+        QSettings s; s.beginGroup("options"); s.setValue("filmstrippinned", newPinned);
+        qvApp->getSettingsManager().loadSettings();
+    }
 }
 
 void MainWindow::openFile(const QString &fileName)

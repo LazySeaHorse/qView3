@@ -161,6 +161,17 @@ void QVOptionsDialog::syncSettings(bool defaults, bool makeConnections)
     syncCheckbox(ui->menubarCheckbox, "menubarenabled", defaults, makeConnections);
     // fullscreendetails
     syncCheckbox(ui->detailsInFullscreen, "fullscreendetails", defaults, makeConnections);
+
+    // Visual Effects
+    if (ui->visualEffectsGroupBox)
+    {
+        syncCheckbox(ui->openCloseAnimCheckbox, "opencloseanimenabled", defaults, makeConnections);
+        syncSpinBox(ui->openCloseAnimDurationSpinBox, "opencloseanimduration", defaults, makeConnections);
+        syncCheckbox(ui->overlayEnabledCheckbox, "overlayenabled", defaults, makeConnections);
+        syncSpinBox(ui->overlayOpacitySpinBox, "overlayopacity", defaults, makeConnections);
+        syncCheckbox(ui->filmStripPinnedCheckbox, "filmstrippinned", defaults, makeConnections);
+        syncSpinBox(ui->filmStripTimeoutSpinBox, "filmstriptimeout", defaults, makeConnections);
+    }
     // filteringenabled
     syncCheckbox(ui->filteringCheckbox, "filteringenabled", defaults, makeConnections);
     // scalingenabled

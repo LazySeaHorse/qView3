@@ -3,6 +3,8 @@ SOURCES += \
     $$PWD/mainwindow.cpp \
     $$PWD/openwith.cpp \
     $$PWD/qvgraphicsview.cpp \
+    $$PWD/animatedgraphicsview.cpp \
+    $$PWD/thumbnailstrip.cpp \
     $$PWD/qvoptionsdialog.cpp \
     $$PWD/qvapplication.cpp \
     $$PWD/qvaboutdialog.cpp \
@@ -25,6 +27,8 @@ HEADERS += \
     $$PWD/mainwindow.h \
     $$PWD/openwith.h \
     $$PWD/qvgraphicsview.h \
+    $$PWD/animatedgraphicsview.h \
+    $$PWD/thumbnailstrip.h \
     $$PWD/qvoptionsdialog.h \
     $$PWD/qvapplication.h \
     $$PWD/qvaboutdialog.h \
